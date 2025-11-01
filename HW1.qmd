@@ -233,3 +233,10 @@ knitr::kable(logit_m2_tbl, digits = 3)
 ```{r q7_var}
 knitr::kable(logit_m2_var, digits = 3)
 ```
+
+
+## Question 8
+
+```{r q8_table}
+knitr::kable(gee_tbl, digits = 3)
+```
