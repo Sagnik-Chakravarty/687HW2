@@ -219,3 +219,10 @@ gee_alpha <- summary(gee_m)$working.correlation[1, 2]
 ```{r q5_table}
 knitr::kable(logit_m1_tbl, digits = 3)
 ```
+
+
+## Question 6
+
+```{r q6_table}
+knitr::kable(logit_m2_tbl, digits = 3)
+```
