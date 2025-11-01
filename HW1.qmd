@@ -159,3 +159,63 @@ knitr::kable(cor_exchange, caption = "Exchangeable correlation (scaled)")
 knitr::kable(cor_ar1, caption = "AR(1) correlation (scaled)")
 knitr::kable(cor_unstruct, caption = "Unstructured correlation (scaled)")
 ```
+
+## Question 5
+
+```{r q5_models, include=FALSE}
+logit_m1 <- glmer(
+	htn ~ year + (year | HHIDPN),
+	data = hrs,
+	family = binomial,
+	control = glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 2e5))
+)
+
+logit_m1_tbl <- tidy(logit_m1, effects = "fixed", conf.int = TRUE) %>%
+	mutate(
+		odds_ratio = exp(estimate),
+		conf.low.or = exp(conf.low),
+		conf.high.or = exp(conf.high)
+	) %>%
+	select(term, estimate, std.error, conf.low, conf.high, odds_ratio, conf.low.or, conf.high.or)
+
+logit_m2 <- glmer(
+	htn ~ year + RAGENDER + age0_c + (year | HHIDPN),
+	data = hrs,
+	family = binomial,
+	control = glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 2e5))
+)
+
+logit_m2_tbl <- tidy(logit_m2, effects = "fixed", conf.int = TRUE) %>%
+	mutate(
+		odds_ratio = exp(estimate),
+		conf.low.or = exp(conf.low),
+		conf.high.or = exp(conf.high)
+	) %>%
+	select(term, estimate, std.error, conf.low, conf.high, odds_ratio, conf.low.or, conf.high.or)
+
+logit_m2_var <- as.data.frame(VarCorr(logit_m2)) %>%
+	select(grp, var1, var2, vcov, sdcor)
+```
+```{r}
+gee_m <- geeglm(
+	htn ~ year + RAGENDER + age0_c,
+	id = HHIDPN,
+	data = hrs,
+	family = binomial,
+	corstr = "exchangeable"
+)
+
+gee_tbl <- tidy(gee_m, conf.int = TRUE) %>%
+	mutate(
+		odds_ratio = exp(estimate),
+		conf.low.or = exp(conf.low),
+		conf.high.or = exp(conf.high)
+	) %>%
+	select(term, estimate, std.error, conf.low, conf.high, odds_ratio, conf.low.or, conf.high.or)
+
+gee_alpha <- summary(gee_m)$working.correlation[1, 2]
+```
+
+```{r q5_table}
+knitr::kable(logit_m1_tbl, digits = 3)
+```
