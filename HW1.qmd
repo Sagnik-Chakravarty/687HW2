@@ -115,3 +115,47 @@ gls_coefs <- tidy(best_gls, conf.int = TRUE)
 knitr::kable(gls_coefs, digits = 3)
 ```
 
+# Question 4
+
+```{r q4_corr}
+gls_ar1 <- gls(
+	best_formula,
+	data = hrs,
+	correlation = corAR1(form = ~ year | HHIDPN),
+	na.action = na.omit,
+	method = "ML"
+)
+
+gls_unstruct <- gls(
+	best_formula,
+	data = hrs,
+	correlation = corSymm(form = ~ 1 | HHIDPN),
+	weights = varIdent(form = ~ 1 | year_factor),
+	na.action = na.omit,
+	method = "ML",
+	control = glsControl(msMaxIter = 200)
+)
+
+alt_aic <- tibble(
+	correlation = c("exchangeable", "ar1", "unstructured"),
+	AIC = c(AIC(best_gls), AIC(gls_ar1), AIC(gls_unstruct)),
+	logLik = c(
+		as.numeric(logLik(best_gls)),
+		as.numeric(logLik(gls_ar1)),
+		as.numeric(logLik(gls_unstruct))
+	)
+) %>%
+	arrange(AIC)
+```
+
+```{r}
+first_group <- as.character(unique(getGroups(best_gls))[1])
+cor_exchange <- round(as.matrix(cov2cor(getVarCov(best_gls, individual = first_group))), 3)
+cor_ar1 <- round(as.matrix(cov2cor(getVarCov(gls_ar1, individual = first_group))), 3)
+cor_unstruct <- round(as.matrix(cov2cor(getVarCov(gls_unstruct, individual = first_group))), 3)
+
+knitr::kable(alt_aic, digits = 2, caption = "Model fit by working correlation")
+knitr::kable(cor_exchange, caption = "Exchangeable correlation (scaled)")
+knitr::kable(cor_ar1, caption = "AR(1) correlation (scaled)")
+knitr::kable(cor_unstruct, caption = "Unstructured correlation (scaled)")
+```
