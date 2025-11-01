@@ -1,3 +1,4 @@
+# Question 1
 ```{r setup}
 library(tidyverse)
 library(nlme)
@@ -29,4 +30,80 @@ hrs <- hrs %>%
 		age0_c = age0 - age0_mean,
 		year_factor = factor(year)
 	)
+```
+
+```{r q1_summary}
+summary_tbl <- tibble(
+	participants = n_distinct(hrs$HHIDPN),
+	observations = nrow(hrs),
+	mean_visits = hrs %>% count(HHIDPN) %>% pull(n) %>% mean(),
+	mean_baseline_age = age0_mean
+)
+
+knitr::kable(summary_tbl, digits = 1)
+```
+
+```{r q1_spaghetti, fig.width=8, fig.height=5}
+ggplot(hrs, aes(x = year, y = bp_sys, group = HHIDPN, color = RAGENDER)) +
+	geom_line(alpha = 0.25) +
+	stat_summary(aes(group = RAGENDER), fun = mean, geom = "line", linewidth = 1.2, 
+    alpha = 0.9) +
+	scale_color_brewer(palette = "Set1") +
+	labs(
+		x = "Years Since Baseline",
+		y = "Systolic BP (mmHg)",
+		color = "Sex",
+		title = "Individual and Mean Trajectories"
+	)
+```
+
+```{r q1_avg, fig.width=7, fig.height=4}
+avg_bp <- hrs %>%
+	group_by(year, RAGENDER) %>%
+	summarise(mean_bp = mean(bp_sys), .groups = "drop")
+
+ggplot(avg_bp, aes(x = year, y = mean_bp, color = RAGENDER)) +
+	geom_line(linewidth = 1.1) +
+	geom_point(size = 2.5) +
+	scale_color_brewer(palette = "Set1") +
+	labs(
+		x = "Years Since Baseline",
+		y = "Mean Systolic BP (mmHg)",
+		color = "Sex",
+		title = "Mean Trajectories by Sex"
+	)
+```
+
+# Question 2
+
+```{r q2_models}
+model_formulas <- list(
+	linear = bp_sys ~ age0_c + RAGENDER + year,
+	quadratic = bp_sys ~ age0_c + RAGENDER + poly(year, 2, raw = TRUE),
+	cubic = bp_sys ~ age0_c + RAGENDER + poly(year, 3, raw = TRUE)
+)
+
+gls_models <- purrr::map(
+	model_formulas,
+	~ gls(
+		.x,
+		data = hrs,
+		correlation = corCompSymm(form = ~ 1 | HHIDPN),
+		na.action = na.omit,
+		method = "ML"
+	)
+)
+
+aic_comparison <- tibble(
+	model = names(gls_models),
+	AIC = purrr::map_dbl(gls_models, AIC),
+	logLik = purrr::map_dbl(gls_models, ~ as.numeric(logLik(.x)))
+) %>%
+	arrange(AIC)
+
+best_model_name <- aic_comparison$model[1]
+best_gls <- gls_models[[best_model_name]]
+best_formula <- model_formulas[[best_model_name]]
+
+knitr::kable(aic_comparison, digits = 2)
 ```
